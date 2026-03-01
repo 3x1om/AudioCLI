@@ -146,10 +146,11 @@ class Resolver:
         client_id = os.getenv("SPOTIFY_CLIENT_ID")
         client_secret = os.getenv("SPOTIFY_CLIENT_SECRET")
         if not (client_id and client_secret):
-            raise RuntimeError(
-                "Spotify search requires SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET. "
-                "Spotify links still work through oEmbed when available."
-            )
+            # No API keys: return playable fallback results from YouTube.
+            fallback = self.search("youtube", f"{query} audio", limit=limit)
+            for item in fallback:
+                item.source = "spotify-fallback"
+            return fallback
         try:
             import spotipy
             from spotipy.oauth2 import SpotifyClientCredentials
