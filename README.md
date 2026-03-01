@@ -18,15 +18,19 @@ Supported flow:
 - `mpv`
 - internet connection
 
-Install system deps:
+## One-line install + run (Fedora)
 
 ```bash
-sudo apt update && sudo apt install -y mpv ffmpeg
+git clone https://github.com/3x1om/audiocli.git && cd audiocli && sudo dnf install -y mpv ffmpeg python3 python3-pip && python3 -m venv .venv && source .venv/bin/activate && pip install -U pip && pip install -e . && audiocli
 ```
 
-## Install
+## Manual install
 
 ```bash
+sudo dnf install -y mpv ffmpeg python3 python3-pip
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -U pip
 pip install -e .
 ```
 
