@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import shlex
+import subprocess
 import sys
 from collections.abc import Callable
 
@@ -34,6 +35,7 @@ class App:
         self._running = True
 
     def run(self) -> None:
+        self._repair_terminal()
         print("audiocli (linux) - type 'help' for commands")
         while self._running:
             try:
@@ -62,13 +64,14 @@ class App:
             self.player.shutdown()
         except KeyboardInterrupt:
             pass
+        self._repair_terminal()
 
     def cmd_help(self, _: str) -> None:
         print(
             "\n".join(
                 [
-                    "play <query_or_url> [--repeat N]  resolve and play immediately",
-                    "add <query_or_url> [--repeat N]   resolve and add to queue",
+                    "play <query_or_url> [--repeat N|--repeated]  resolve and play immediately",
+                    "add <query_or_url> [--repeat N|--repeated]   resolve and add to queue",
                     "download <query_or_url> [--path DIR]  download local audio copy",
                     "updates <query>          latest music uploads for query",
                     "search <provider> <q>    provider = youtube|soundcloud|spotify",
@@ -194,16 +197,27 @@ class App:
         i = 0
         while i < len(parts):
             part = parts[i]
-            if part == "--repeat":
+            if part in ("--repeat", "--repeated"):
                 repeat_count = 2
                 if i + 1 < len(parts):
                     nxt = parts[i + 1]
                     if nxt.isdigit():
                         repeat_count = int(nxt)
                         i += 1
-                if repeat_count < 1:
+                    elif nxt.startswith("--repeat="):
+                        value = nxt.split("=", 1)[1]
+                        if not value.isdigit():
+                            raise ValueError("--repeat must be a positive integer.")
+                        repeat_count = int(value)
+                        i += 1
+            elif part.startswith("--repeat="):
+                value = part.split("=", 1)[1]
+                if not value.isdigit():
                     raise ValueError("--repeat must be a positive integer.")
-            else:
+                repeat_count = int(value)
+            if repeat_count < 1:
+                raise ValueError("--repeat must be a positive integer.")
+            elif not part.startswith("--repeat"):
                 cleaned.append(part)
             i += 1
         query = " ".join(cleaned).strip()
@@ -230,6 +244,11 @@ class App:
         if not query:
             raise ValueError("Usage: download <query_or_url> [--path DIR]")
         return query, out_dir
+
+    @staticmethod
+    def _repair_terminal() -> None:
+        # Restore a sane TTY state after interrupted playback sessions.
+        subprocess.run(["stty", "sane"], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 
 def main() -> None:

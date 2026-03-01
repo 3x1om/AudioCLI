@@ -34,8 +34,8 @@ python3 -m pip uninstall -y audiocli
 ## Commands
 
 ```text
-play <query_or_url> [--repeat N]  resolve and play immediately
-add <query_or_url> [--repeat N]   resolve and add to queue
+play <query_or_url> [--repeat N|--repeated]  resolve and play immediately
+add <query_or_url> [--repeat N|--repeated]   resolve and add to queue
 download <query_or_url> [--path DIR]  download local audio copy
 updates <query>          latest music uploads for query
 search <provider> <q>    provider = youtube|soundcloud|spotify
@@ -53,7 +53,7 @@ quit                     exit app
 
 ```text
 play daft punk harder better faster stronger
-play montagem rugada --repeat 2
+play montagem rugada --repeated
 add https://soundcloud.com/forss/flickermood
 download https://soundcloud.com/forss/flickermood
 updates the weeknd

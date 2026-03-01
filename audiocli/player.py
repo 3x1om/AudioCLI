@@ -88,10 +88,15 @@ class Player:
                     "mpv",
                     "--no-video",
                     "--really-quiet",
+                    "--terminal=no",
+                    "--input-terminal=no",
                     "--msg-level=all=error",
                     "--force-window=no",
                     track.stream_url,
                 ],
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
             )
             self._proc.wait()
             if track.repeat_count > 1 and not self._stop.is_set() and not self._interrupt.is_set():
