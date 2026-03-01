@@ -10,7 +10,7 @@ class Track:
     stream_url: str
     source: str
     duration: int | None = None
-    repeat: bool = False
+    repeat_count: int = 1
 
     @property
     def pretty_duration(self) -> str:

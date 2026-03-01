@@ -83,13 +83,15 @@ class Player:
                 [
                     "mpv",
                     "--no-video",
-                    "--quiet",
+                    "--really-quiet",
+                    "--msg-level=all=error",
                     "--force-window=no",
                     track.stream_url,
                 ],
             )
             self._proc.wait()
-            if track.repeat and not self._stop.is_set() and not self._interrupt.is_set():
+            if track.repeat_count > 1 and not self._stop.is_set() and not self._interrupt.is_set():
+                track.repeat_count -= 1
                 with self._lock:
                     self.queue.appendleft(track)
             self._now = None

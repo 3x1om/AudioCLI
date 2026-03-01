@@ -64,8 +64,8 @@ class App:
         print(
             "\n".join(
                 [
-                    "play <query_or_url> [--repeat]  resolve and play immediately",
-                    "add <query_or_url> [--repeat]   resolve and add to queue",
+                    "play <query_or_url> [--repeat N]  resolve and play immediately",
+                    "add <query_or_url> [--repeat N]   resolve and add to queue",
                     "download <query_or_url> [--path DIR]  download local audio copy",
                     "updates <query>          latest music uploads for query",
                     "search <provider> <q>    provider = youtube|soundcloud|spotify",
@@ -84,22 +84,22 @@ class App:
     def cmd_play(self, arg: str) -> None:
         if not arg:
             raise ValueError("Usage: play <query_or_url>")
-        query, repeat = self._parse_repeat_arg(arg)
+        query, repeat_count = self._parse_repeat_arg(arg)
         track = self.resolver.resolve(query)
-        track.repeat = repeat
+        track.repeat_count = repeat_count
         self.player.add_front(track)
         self.player.next()
-        suffix = " (repeat)" if repeat else ""
+        suffix = f" ({repeat_count}x)" if repeat_count > 1 else ""
         print(f"Queued (front): {track.title}{suffix}")
 
     def cmd_add(self, arg: str) -> None:
         if not arg:
             raise ValueError("Usage: add <query_or_url>")
-        query, repeat = self._parse_repeat_arg(arg)
+        query, repeat_count = self._parse_repeat_arg(arg)
         track = self.resolver.resolve(query)
-        track.repeat = repeat
+        track.repeat_count = repeat_count
         self.player.add(track)
-        suffix = " (repeat)" if repeat else ""
+        suffix = f" ({repeat_count}x)" if repeat_count > 1 else ""
         print(f"Queued: {track.title}{suffix}")
 
     def cmd_download(self, arg: str) -> None:
@@ -148,7 +148,7 @@ class App:
             print("Queue is empty.")
             return
         for i, t in enumerate(self.player.queue, start=1):
-            suffix = " [repeat]" if t.repeat else ""
+            suffix = f" [{t.repeat_count}x]" if t.repeat_count > 1 else ""
             print(f"{i}. {t.title} [{t.pretty_duration}]{suffix} - {t.webpage_url}")
 
     def cmd_now_playing(self, _: str) -> None:
@@ -156,7 +156,7 @@ class App:
         if not track:
             print("Nothing playing.")
             return
-        suffix = " [repeat]" if track.repeat else ""
+        suffix = f" [{track.repeat_count}x left]" if track.repeat_count > 1 else ""
         print(f"Now playing: {track.title} [{track.pretty_duration}]{suffix}")
         print(track.webpage_url)
 
@@ -184,19 +184,29 @@ class App:
         self._running = False
 
     @staticmethod
-    def _parse_repeat_arg(arg: str) -> tuple[str, bool]:
+    def _parse_repeat_arg(arg: str) -> tuple[str, int]:
         parts = shlex.split(arg)
-        repeat = False
+        repeat_count = 1
         cleaned: list[str] = []
-        for part in parts:
+        i = 0
+        while i < len(parts):
+            part = parts[i]
             if part == "--repeat":
-                repeat = True
+                repeat_count = 2
+                if i + 1 < len(parts):
+                    nxt = parts[i + 1]
+                    if nxt.isdigit():
+                        repeat_count = int(nxt)
+                        i += 1
+                if repeat_count < 1:
+                    raise ValueError("--repeat must be a positive integer.")
             else:
                 cleaned.append(part)
+            i += 1
         query = " ".join(cleaned).strip()
         if not query:
             raise ValueError("Missing query_or_url.")
-        return query, repeat
+        return query, repeat_count
 
     @staticmethod
     def _parse_download_args(arg: str) -> tuple[str, str]:
