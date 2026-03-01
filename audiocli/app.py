@@ -1,0 +1,158 @@
+from __future__ import annotations
+
+import shlex
+import sys
+from collections.abc import Callable
+
+from .player import Player
+from .providers import Resolver
+
+
+class App:
+    def __init__(self) -> None:
+        if not sys.platform.startswith("linux"):
+            raise RuntimeError("This app is Linux-only.")
+        self.resolver = Resolver()
+        self.player = Player()
+        self._commands: dict[str, Callable[[str], None]] = {
+            "help": self.cmd_help,
+            "play": self.cmd_play,
+            "add": self.cmd_add,
+            "search": self.cmd_search,
+            "queue": self.cmd_queue,
+            "np": self.cmd_now_playing,
+            "next": self.cmd_next,
+            "pause": self.cmd_pause,
+            "resume": self.cmd_resume,
+            "stop": self.cmd_stop,
+            "clear": self.cmd_clear,
+            "quit": self.cmd_quit,
+            "exit": self.cmd_quit,
+        }
+        self._running = True
+
+    def run(self) -> None:
+        print("audiocli (linux) - type 'help' for commands")
+        while self._running:
+            try:
+                raw = input("audiocli> ").strip()
+            except (KeyboardInterrupt, EOFError):
+                print()
+                break
+            if not raw:
+                continue
+            parts = shlex.split(raw)
+            cmd = parts[0].lower()
+            arg = raw[len(parts[0]) :].strip()
+            handler = self._commands.get(cmd)
+            if not handler:
+                # Treat free text as an implicit "play" query for faster UX.
+                try:
+                    self.cmd_play(raw)
+                except Exception as e:
+                    print(f"Unknown command: {cmd} ({e})")
+                continue
+            try:
+                handler(arg)
+            except Exception as e:
+                print(f"Error: {e}")
+        self.player.shutdown()
+
+    def cmd_help(self, _: str) -> None:
+        print(
+            "\n".join(
+                [
+                    "play <query_or_url>      resolve and play immediately",
+                    "add <query_or_url>       resolve and add to queue",
+                    "search <provider> <q>    provider = youtube|soundcloud|spotify",
+                    "queue                    show pending queue",
+                    "np                       show now playing",
+                    "next                     skip current track",
+                    "pause                    pause playback",
+                    "resume                   resume playback",
+                    "stop                     stop and clear queue",
+                    "clear                    clear queued tracks",
+                    "quit                     exit app",
+                ]
+            )
+        )
+
+    def cmd_play(self, arg: str) -> None:
+        if not arg:
+            raise ValueError("Usage: play <query_or_url>")
+        track = self.resolver.resolve(arg)
+        self.player.add_front(track)
+        self.player.next()
+        print(f"Queued (front): {track.title}")
+
+    def cmd_add(self, arg: str) -> None:
+        if not arg:
+            raise ValueError("Usage: add <query_or_url>")
+        track = self.resolver.resolve(arg)
+        self.player.add(track)
+        print(f"Queued: {track.title}")
+
+    def cmd_search(self, arg: str) -> None:
+        parts = shlex.split(arg)
+        if len(parts) < 2:
+            raise ValueError("Usage: search <provider> <query>")
+        provider = parts[0]
+        query = " ".join(parts[1:])
+        results = self.resolver.search(provider, query, limit=5)
+        if not results:
+            print("No results.")
+            return
+        for i, r in enumerate(results, start=1):
+            dur = "--:--"
+            if r.duration:
+                m, s = divmod(r.duration, 60)
+                dur = f"{m}:{s:02d}"
+            print(f"{i}. [{r.source}] {r.title} ({dur})")
+            print(f"   {r.url}")
+
+    def cmd_queue(self, _: str) -> None:
+        if not self.player.queue:
+            print("Queue is empty.")
+            return
+        for i, t in enumerate(self.player.queue, start=1):
+            print(f"{i}. {t.title} [{t.pretty_duration}] - {t.webpage_url}")
+
+    def cmd_now_playing(self, _: str) -> None:
+        track = self.player.now_playing
+        if not track:
+            print("Nothing playing.")
+            return
+        print(f"Now playing: {track.title} [{track.pretty_duration}]")
+        print(track.webpage_url)
+
+    def cmd_next(self, _: str) -> None:
+        self.player.next()
+        print("Skipped.")
+
+    def cmd_pause(self, _: str) -> None:
+        self.player.pause()
+        print("Paused.")
+
+    def cmd_resume(self, _: str) -> None:
+        self.player.resume()
+        print("Resumed.")
+
+    def cmd_stop(self, _: str) -> None:
+        self.player.stop()
+        print("Stopped and cleared queue.")
+
+    def cmd_clear(self, _: str) -> None:
+        self.player.queue.clear()
+        print("Queue cleared.")
+
+    def cmd_quit(self, _: str) -> None:
+        self._running = False
+
+
+def main() -> None:
+    app = App()
+    app.run()
+
+
+if __name__ == "__main__":
+    main()
