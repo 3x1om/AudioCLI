@@ -154,7 +154,7 @@ class Resolver:
             import spotipy
             from spotipy.oauth2 import SpotifyClientCredentials
         except ImportError as e:
-            raise RuntimeError("Install optional dependency 'spotipy' to use Spotify search.") from e
+            raise RuntimeError("Missing dependency 'spotipy'. Reinstall audiocli to include Spotify search support.") from e
 
         creds = SpotifyClientCredentials(client_id=client_id, client_secret=client_secret)
         api = spotipy.Spotify(auth_manager=creds)

@@ -11,10 +11,8 @@ requires-python = ">=3.11"
 dependencies = [
   "yt-dlp>=2025.1.0",
   "requests>=2.31.0",
+  "spotipy>=2.24.0",
 ]
-
-[project.optional-dependencies]
-spotify = ["spotipy>=2.24.0"]
 
 [project.scripts]
 audiocli = "audiocli.app:main"

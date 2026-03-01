@@ -6,6 +6,7 @@ Supported flow:
 - YouTube links + search
 - SoundCloud links + search
 - Spotify links (resolved to playable audio by searching for the same track)
+- Spotify search (integrated dependency)
 - Many other sites supported by `yt-dlp` links
 
 ## Important notes
@@ -18,36 +19,10 @@ Supported flow:
 - `mpv`
 - internet connection
 
-## One-line install + run (Fedora)
+## One command install + run (all major Linux distros)
 
 ```bash
-git clone https://github.com/3x1om/audiocli.git && cd audiocli && sudo dnf install -y mpv ffmpeg python3 python3-pip && python3 -m venv .venv && source .venv/bin/activate && pip install -U pip && pip install -e . && audiocli
-```
-
-## Manual install
-
-```bash
-sudo dnf install -y mpv ffmpeg python3 python3-pip
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -U pip
-pip install -e .
-```
-
-Optional Spotify search support:
-
-```bash
-pip install -e .[spotify]
-export SPOTIFY_CLIENT_ID="..."
-export SPOTIFY_CLIENT_SECRET="..."
-```
-
-## Run
-
-```bash
-audiocli
-# or
-python -m audiocli
+git clone https://github.com/3x1om/audiocli.git && cd audiocli && bash -lc 'set -e; if command -v apt-get >/dev/null; then sudo apt-get update && sudo apt-get install -y mpv ffmpeg python3 python3-venv python3-pip; elif command -v dnf >/dev/null; then sudo dnf install -y mpv ffmpeg python3 python3-pip; elif command -v pacman >/dev/null; then sudo pacman -Sy --noconfirm mpv ffmpeg python python-pip; elif command -v zypper >/dev/null; then sudo zypper --non-interactive install mpv ffmpeg python311 python311-pip; elif command -v apk >/dev/null; then sudo apk add mpv ffmpeg python3 py3-pip; else echo "Unsupported distro: install mpv ffmpeg python3 python3-pip manually."; exit 1; fi; python3 -m venv .venv; . .venv/bin/activate; pip install -U pip; pip install -e .; echo "Set Spotify API keys to enable: search spotify <query>"; echo "export SPOTIFY_CLIENT_ID=..."; echo "export SPOTIFY_CLIENT_SECRET=..."; audiocli'
 ```
 
 ## Commands
