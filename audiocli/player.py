@@ -57,7 +57,11 @@ class Player:
         self._stop.set()
         self.next()
         if self._worker.is_alive():
-            self._worker.join(timeout=2)
+            try:
+                self._worker.join(timeout=2)
+            except KeyboardInterrupt:
+                # Allow fast forced exit without a traceback if user presses Ctrl+C again.
+                pass
 
     @property
     def now_playing(self) -> Track | None:

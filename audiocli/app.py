@@ -58,7 +58,10 @@ class App:
                 handler(arg)
             except Exception as e:
                 print(f"Error: {e}")
-        self.player.shutdown()
+        try:
+            self.player.shutdown()
+        except KeyboardInterrupt:
+            pass
 
     def cmd_help(self, _: str) -> None:
         print(
