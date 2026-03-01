@@ -20,6 +20,7 @@ class Player:
         self._proc: subprocess.Popen[str] | None = None
         self._stop = threading.Event()
         self._pause = threading.Event()
+        self._interrupt = threading.Event()
         self._lock = threading.Lock()
         self._worker = threading.Thread(target=self._run, daemon=True)
         self._worker.start()
@@ -33,6 +34,7 @@ class Player:
             self.queue.appendleft(track)
 
     def next(self) -> None:
+        self._interrupt.set()
         if self._proc and self._proc.poll() is None:
             self._proc.terminate()
 
@@ -76,6 +78,7 @@ class Player:
                 continue
 
             self._now = track
+            self._interrupt.clear()
             self._proc = subprocess.Popen(
                 [
                     "mpv",
@@ -86,4 +89,7 @@ class Player:
                 ],
             )
             self._proc.wait()
+            if track.repeat and not self._stop.is_set() and not self._interrupt.is_set():
+                with self._lock:
+                    self.queue.appendleft(track)
             self._now = None

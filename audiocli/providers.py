@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 import re
 from dataclasses import dataclass
-from typing import Any
+from pathlib import Path
 from urllib.parse import quote
 
 import requests
@@ -60,6 +60,52 @@ class Resolver:
                 )
             )
         return out
+
+    def latest(self, query: str, limit: int = 5) -> list[SearchResult]:
+        with YoutubeDL(self._base_opts) as ydl:
+            info = ydl.extract_info(f"ytsearchdate{limit}:{query} official music", download=False)
+        entries = info.get("entries") or []
+        out: list[SearchResult] = []
+        for e in entries:
+            if not e:
+                continue
+            out.append(
+                SearchResult(
+                    title=e.get("title") or "Unknown",
+                    url=e.get("webpage_url") or e.get("url") or "",
+                    source="youtube-new",
+                    duration=e.get("duration"),
+                )
+            )
+        return out
+
+    def download(self, query_or_url: str, output_dir: str = "downloads") -> str:
+        target = Path(output_dir).expanduser()
+        target.mkdir(parents=True, exist_ok=True)
+        source = query_or_url.strip()
+        if not self._is_url(source):
+            with YoutubeDL(self._base_opts) as ydl:
+                info = ydl.extract_info(f"ytsearch1:{source}", download=False)
+            entries = info.get("entries") or []
+            if not entries:
+                raise RuntimeError("No results found for download.")
+            source = entries[0].get("webpage_url") or entries[0].get("url") or source
+
+        opts = {
+            "format": "bestaudio/best",
+            "quiet": True,
+            "no_warnings": True,
+            "outtmpl": str(target / "%(title)s [%(id)s].%(ext)s"),
+            "noplaylist": True,
+            "postprocessors": [{"key": "FFmpegExtractAudio", "preferredcodec": "mp3", "preferredquality": "192"}],
+        }
+        with YoutubeDL(opts) as ydl:
+            info = ydl.extract_info(source, download=True)
+            path = ydl.prepare_filename(info)
+        ext = Path(path).suffix
+        if ext != ".mp3":
+            path = str(Path(path).with_suffix(".mp3"))
+        return path
 
     def resolve(self, query_or_url: str) -> Track:
         q = query_or_url.strip()

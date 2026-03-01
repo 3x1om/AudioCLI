@@ -18,6 +18,8 @@ class App:
             "help": self.cmd_help,
             "play": self.cmd_play,
             "add": self.cmd_add,
+            "download": self.cmd_download,
+            "updates": self.cmd_updates,
             "search": self.cmd_search,
             "queue": self.cmd_queue,
             "np": self.cmd_now_playing,
@@ -62,8 +64,10 @@ class App:
         print(
             "\n".join(
                 [
-                    "play <query_or_url>      resolve and play immediately",
-                    "add <query_or_url>       resolve and add to queue",
+                    "play <query_or_url> [--repeat]  resolve and play immediately",
+                    "add <query_or_url> [--repeat]   resolve and add to queue",
+                    "download <query_or_url> [--path DIR]  download local audio copy",
+                    "updates <query>          latest music uploads for query",
                     "search <provider> <q>    provider = youtube|soundcloud|spotify",
                     "queue                    show pending queue",
                     "np                       show now playing",
@@ -80,17 +84,46 @@ class App:
     def cmd_play(self, arg: str) -> None:
         if not arg:
             raise ValueError("Usage: play <query_or_url>")
-        track = self.resolver.resolve(arg)
+        query, repeat = self._parse_repeat_arg(arg)
+        track = self.resolver.resolve(query)
+        track.repeat = repeat
         self.player.add_front(track)
         self.player.next()
-        print(f"Queued (front): {track.title}")
+        suffix = " (repeat)" if repeat else ""
+        print(f"Queued (front): {track.title}{suffix}")
 
     def cmd_add(self, arg: str) -> None:
         if not arg:
             raise ValueError("Usage: add <query_or_url>")
-        track = self.resolver.resolve(arg)
+        query, repeat = self._parse_repeat_arg(arg)
+        track = self.resolver.resolve(query)
+        track.repeat = repeat
         self.player.add(track)
-        print(f"Queued: {track.title}")
+        suffix = " (repeat)" if repeat else ""
+        print(f"Queued: {track.title}{suffix}")
+
+    def cmd_download(self, arg: str) -> None:
+        if not arg:
+            raise ValueError("Usage: download <query_or_url> [--path DIR]")
+        query, out_dir = self._parse_download_args(arg)
+        out = self.resolver.download(query, output_dir=out_dir)
+        print(f"Downloaded: {out}")
+
+    def cmd_updates(self, arg: str) -> None:
+        query = arg.strip()
+        if not query:
+            raise ValueError("Usage: updates <query>")
+        results = self.resolver.latest(query, limit=5)
+        if not results:
+            print("No recent tracks found.")
+            return
+        for i, r in enumerate(results, start=1):
+            dur = "--:--"
+            if r.duration:
+                m, s = divmod(r.duration, 60)
+                dur = f"{m}:{s:02d}"
+            print(f"{i}. [{r.source}] {r.title} ({dur})")
+            print(f"   {r.url}")
 
     def cmd_search(self, arg: str) -> None:
         parts = shlex.split(arg)
@@ -115,14 +148,16 @@ class App:
             print("Queue is empty.")
             return
         for i, t in enumerate(self.player.queue, start=1):
-            print(f"{i}. {t.title} [{t.pretty_duration}] - {t.webpage_url}")
+            suffix = " [repeat]" if t.repeat else ""
+            print(f"{i}. {t.title} [{t.pretty_duration}]{suffix} - {t.webpage_url}")
 
     def cmd_now_playing(self, _: str) -> None:
         track = self.player.now_playing
         if not track:
             print("Nothing playing.")
             return
-        print(f"Now playing: {track.title} [{track.pretty_duration}]")
+        suffix = " [repeat]" if track.repeat else ""
+        print(f"Now playing: {track.title} [{track.pretty_duration}]{suffix}")
         print(track.webpage_url)
 
     def cmd_next(self, _: str) -> None:
@@ -147,6 +182,41 @@ class App:
 
     def cmd_quit(self, _: str) -> None:
         self._running = False
+
+    @staticmethod
+    def _parse_repeat_arg(arg: str) -> tuple[str, bool]:
+        parts = shlex.split(arg)
+        repeat = False
+        cleaned: list[str] = []
+        for part in parts:
+            if part == "--repeat":
+                repeat = True
+            else:
+                cleaned.append(part)
+        query = " ".join(cleaned).strip()
+        if not query:
+            raise ValueError("Missing query_or_url.")
+        return query, repeat
+
+    @staticmethod
+    def _parse_download_args(arg: str) -> tuple[str, str]:
+        parts = shlex.split(arg)
+        out_dir = "downloads"
+        cleaned: list[str] = []
+        i = 0
+        while i < len(parts):
+            if parts[i] == "--path":
+                i += 1
+                if i >= len(parts):
+                    raise ValueError("Usage: download <query_or_url> [--path DIR]")
+                out_dir = parts[i]
+            else:
+                cleaned.append(parts[i])
+            i += 1
+        query = " ".join(cleaned).strip()
+        if not query:
+            raise ValueError("Usage: download <query_or_url> [--path DIR]")
+        return query, out_dir
 
 
 def main() -> None:
