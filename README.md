@@ -25,6 +25,12 @@ Supported flow:
 git clone https://github.com/3x1om/audiocli.git && cd audiocli && bash -lc 'set -e; if command -v apt-get >/dev/null; then sudo apt-get update && sudo apt-get install -y mpv ffmpeg python3 python3-venv python3-pip; elif command -v dnf >/dev/null; then sudo dnf install -y mpv ffmpeg python3 python3-pip; elif command -v pacman >/dev/null; then sudo pacman -Sy --noconfirm mpv ffmpeg python python-pip; elif command -v zypper >/dev/null; then sudo zypper --non-interactive install mpv ffmpeg python3 python3-pip; elif command -v apk >/dev/null; then sudo apk add mpv ffmpeg python3 py3-pip; else echo "Unsupported distro: install mpv ffmpeg python3 python3-pip manually."; exit 1; fi; python3 -m ensurepip --upgrade || true; python3 -m venv .venv; . .venv/bin/activate; pip install -U pip; pip install -e .; audiocli'
 ```
 
+## One command uninstall
+
+```bash
+python3 -m pip uninstall -y audiocli
+```
+
 ## Commands
 
 ```text
